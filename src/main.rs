@@ -1,10 +1,7 @@
 use bracket_lib::prelude::*;
 use specs::prelude::*;
 use specs_derive::Component;
-use std::{
-    cmp::{max, min},
-    collections::btree_map::Keys,
-};
+use std::cmp::{max, min};
 
 struct State {
     ecs: World,
@@ -12,8 +9,11 @@ struct State {
 impl GameState for State {
     fn tick(&mut self, ctx: &mut BTerm) {
         ctx.cls();
-        self.run_systems();
         player_input(self, ctx);
+        self.run_systems();
+
+        let map = self.ecs.fetch::<Vec<TileType>>();
+        draw_map(&map, ctx);
 
         let position = self.ecs.read_storage::<Position>();
         let renderer = self.ecs.read_storage::<Renderer>();
@@ -38,8 +38,6 @@ impl GameState for State {
 
 impl State {
     fn run_systems(&mut self) {
-        let mut leftmove = LeftMove {};
-        leftmove.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -70,31 +68,20 @@ struct Renderer {
 #[derive(Component)]
 struct Movement {}
 
-struct LeftMove {}
-
-impl<'a> System<'a> for LeftMove {
-    type SystemData = (ReadStorage<'a, Movement>, WriteStorage<'a, Position>);
-
-    fn run(&mut self, (mov, mut pos): Self::SystemData) {
-        for (_mov, pos) in (&mov, &mut pos).join() {
-            pos.x -= 1;
-            if pos.x < 0 {
-                pos.x = 79;
-            }
-        }
-    }
-}
-
 #[derive(Component, Debug)]
 struct Player {}
 
 fn move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut position = ecs.write_storage::<Position>();
     let mut player = ecs.write_storage::<Player>();
+    let map = ecs.fetch::<Vec<TileType>>();
 
     for (_player, pos) in (&mut player, &mut position).join() {
-        pos.x = min(79, max(0, pos.x + delta_x));
-        pos.y = min(49, max(0, pos.y + delta_y));
+        let des_idx = xy_idx(pos.x + delta_x, pos.y + delta_y);
+        if map[des_idx] != TileType::Wall {
+            pos.x = min(79, max(0, pos.x + delta_x));
+            pos.y = min(49, max(0, pos.y + delta_y));
+        }
     }
 }
 
@@ -111,7 +98,64 @@ fn player_input(gs: &mut State, ctx: &mut BTerm) {
     }
 }
 
+#[derive(PartialEq, Clone, Copy)]
+enum TileType {
+    Wall,
+    Floor,
+}
+
+pub fn xy_idx(x: i32, y: i32) -> usize {
+    (y as usize * 80) + x as usize
+}
+
+fn new_map() -> Vec<TileType> {
+    let mut map = vec![TileType::Floor; 80 * 50];
+    for x in 0..80 {
+        map[xy_idx(x, 0)] = TileType::Wall;
+        map[xy_idx(x, 49)] = TileType::Wall;
+    }
+    for y in 0..50 {
+        map[xy_idx(0, y)] = TileType::Wall;
+        map[xy_idx(79, y)] = TileType::Wall;
+    }
+    let mut rng = RandomNumberGenerator::new();
+    for _i in 0..400 {
+        let x = rng.roll_dice(1, 79);
+        let y = rng.roll_dice(1, 49);
+        let idx = xy_idx(x, y);
+        if idx != xy_idx(40, 25) {
+            map[idx] = TileType::Wall;
+        }
+    }
+    map
+}
+
+fn draw_map(map: &[TileType], ctx: &mut BTerm) {
+    let mut x = 0;
+    let mut y = 0;
+
+    for tile in map.iter() {
+        match tile {
+            TileType::Floor => {
+                ctx.set(x, y, GRAY, BLACK, to_cp437('.'));
+            }
+            TileType::Wall => {
+                ctx.set(x, y, GREEN, BLACK, to_cp437('#'));
+            }
+        }
+        x += 1;
+        if x > 79 {
+            x = 0;
+            y += 1;
+        }
+    }
+}
+
 fn main() -> BError {
+    unsafe {
+        std::env::set_var("WINIT_UNIX_BACKEND", "x11");
+    }
+
     let context = BTermBuilder::simple80x50()
         .with_title("Hello Terminal")
         .build();
@@ -124,6 +168,7 @@ fn main() -> BError {
     };
 
     let mut game_state: State = State { ecs: World::new() };
+    game_state.ecs.insert(new_map());
     game_state.ecs.register::<Position>();
     game_state.ecs.register::<Renderer>();
     game_state.ecs.register::<Movement>();
@@ -139,18 +184,5 @@ fn main() -> BError {
         })
         .with(Player {})
         .build();
-    for i in 0..10 {
-        game_state
-            .ecs
-            .create_entity()
-            .with(Position { x: i * 5, y: 5 })
-            .with(Renderer {
-                glyph: to_cp437(char::from_digit(i as u32, 10).unwrap()),
-                foreground: RGB::named(RED),
-                background: RGB::named(BLACK),
-            })
-            .with(Movement {})
-            .build();
-    }
     main_loop(is_context, game_state)
 }
