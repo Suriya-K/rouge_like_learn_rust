@@ -4,9 +4,11 @@ use specs::prelude::*;
 mod components;
 mod map;
 mod player;
+mod rect;
 pub use components::*;
 pub use map::*;
 pub use player::*;
+pub use rect::Rect;
 
 pub struct State {
     ecs: World,
@@ -25,7 +27,8 @@ impl GameState for State {
         self.run_systems();
 
         let map = self.ecs.fetch::<Vec<TileType>>();
-        draw_map(&map, ctx);
+        let rooms = self.ecs.fetch::<Vec<Rect>>();
+        draw_map(&map, &rooms, ctx);
 
         let position = self.ecs.read_storage::<Position>();
         let renderer = self.ecs.read_storage::<Renderer>();
@@ -65,15 +68,25 @@ fn main() -> BError {
     };
 
     let mut game_state: State = State { ecs: World::new() };
-    game_state.ecs.insert(new_map());
+    let (map, rooms) = new_map_rooms_and_corridors();
+    let (player_x, player_y) = rooms[0].center();
+
+    game_state.ecs.insert(map);
+    game_state.ecs.insert(rooms);
+
     game_state.ecs.register::<Position>();
     game_state.ecs.register::<Renderer>();
     game_state.ecs.register::<Movement>();
     game_state.ecs.register::<Player>();
+    game_state.ecs.register::<Room>();
+
     game_state
         .ecs
         .create_entity()
-        .with(Position { x: 40, y: 25 })
+        .with(Position {
+            x: player_x,
+            y: player_y,
+        })
         .with(Renderer {
             glyph: to_cp437('@'),
             foreground: RGB::named(WHITE),

@@ -21,10 +21,18 @@ pub fn player_input(gs: &mut State, ctx: &mut BTerm) {
     match ctx.key {
         None => {}
         Some(key) => match key {
-            VirtualKeyCode::Left => move_player(-1, 0, &mut gs.ecs),
-            VirtualKeyCode::Right => move_player(1, 0, &mut gs.ecs),
-            VirtualKeyCode::Up => move_player(0, -1, &mut gs.ecs),
-            VirtualKeyCode::Down => move_player(0, 1, &mut gs.ecs),
+            VirtualKeyCode::Left | VirtualKeyCode::Numpad4 | VirtualKeyCode::H => {
+                move_player(-1, 0, &mut gs.ecs)
+            }
+            VirtualKeyCode::Right | VirtualKeyCode::Numpad6 | VirtualKeyCode::L => {
+                move_player(1, 0, &mut gs.ecs)
+            }
+            VirtualKeyCode::Up | VirtualKeyCode::Numpad8 | VirtualKeyCode::K => {
+                move_player(0, -1, &mut gs.ecs)
+            }
+            VirtualKeyCode::Down | VirtualKeyCode::Numpad2 | VirtualKeyCode::J => {
+                move_player(0, 1, &mut gs.ecs)
+            }
             _ => {}
         },
     }
