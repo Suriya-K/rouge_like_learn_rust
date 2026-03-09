@@ -5,10 +5,12 @@ mod components;
 mod map;
 mod player;
 mod rect;
+mod visibility_system;
 pub use components::*;
 pub use map::*;
 pub use player::*;
 pub use rect::Rect;
+use visibility_system::VisibilitySystem;
 
 pub struct State {
     ecs: World,
@@ -16,6 +18,8 @@ pub struct State {
 
 impl State {
     fn run_systems(&mut self) {
+        let mut vis_sys = VisibilitySystem {};
+        vis_sys.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -26,9 +30,7 @@ impl GameState for State {
         player_input(self, ctx);
         self.run_systems();
 
-        let map = self.ecs.fetch::<Vec<TileType>>();
-        let rooms = self.ecs.fetch::<Vec<Rect>>();
-        draw_map(&map, &rooms, ctx);
+        draw_map(&self.ecs, ctx);
 
         let position = self.ecs.read_storage::<Position>();
         let renderer = self.ecs.read_storage::<Renderer>();
@@ -68,17 +70,22 @@ fn main() -> BError {
     };
 
     let mut game_state: State = State { ecs: World::new() };
-    let (map, rooms) = new_map_rooms_and_corridors();
-    let (player_x, player_y) = rooms[0].center();
+    let mut map: Map = Map {
+        tiles: vec![TileType::Wall; 80 * 50],
+        rooms: Vec::new(),
+        width: 80,
+        height: 50,
+    };
+    map.new_map_rooms_and_corridors();
+    let (player_x, player_y) = map.rooms[0].center();
 
     game_state.ecs.insert(map);
-    game_state.ecs.insert(rooms);
 
     game_state.ecs.register::<Position>();
     game_state.ecs.register::<Renderer>();
     game_state.ecs.register::<Movement>();
     game_state.ecs.register::<Player>();
-    game_state.ecs.register::<Room>();
+    game_state.ecs.register::<FieldOfView>();
 
     game_state
         .ecs
@@ -93,6 +100,10 @@ fn main() -> BError {
             background: RGB::named(BLACK),
         })
         .with(Player {})
+        .with(FieldOfView {
+            visuble_tiles: Vec::new(),
+            range: 6,
+        })
         .build();
     main_loop(is_context, game_state)
 }

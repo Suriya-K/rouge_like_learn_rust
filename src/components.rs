@@ -1,8 +1,7 @@
-use bracket_lib::prelude::{FontCharType, RGB};
+use super::Map;
+use bracket_lib::prelude::{FontCharType, Point, RGB};
 use specs::prelude::*;
 use specs_derive::*;
-
-use crate::xy_idx;
 
 // if not use #[derive(Component)] marco then we will have to write manual component
 // imple Component for Position {
@@ -32,12 +31,13 @@ impl Position {
         (self.x, self.y)
     }
 
-    pub fn get_idx(&self) -> usize {
-        xy_idx(self.x, self.y)
+    pub fn get_idx(&self, map: &Map) -> usize {
+        map.xy_idx(self.x, self.y)
     }
 }
 
 #[derive(Component)]
-pub struct Room {
-    pub room_number: i32,
+pub struct FieldOfView {
+    pub visuble_tiles: Vec<Point>,
+    pub range: i32,
 }
