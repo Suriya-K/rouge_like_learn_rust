@@ -18,6 +18,7 @@ pub struct Map {
     pub rooms: Vec<Rect>,
     pub width: i32,
     pub height: i32,
+    pub revealed_tiles: Vec<bool>,
 }
 
 impl Map {
@@ -144,27 +145,22 @@ pub fn draw_room_number(number: i32, ctx: &mut BTerm, x: i32, y: i32) {
 
 /// Draw a map base on TileType
 pub fn draw_map(ecs: &World, ctx: &mut BTerm) {
-    let mut fovs = ecs.write_storage::<FieldOfView>();
-    let mut player = ecs.write_storage::<Player>();
     let map = ecs.fetch::<Map>();
 
-    for (_player, fov) in (&mut player, &mut fovs).join() {
-        let mut x = 0;
-        let mut y = 0;
+    let mut x = 0;
+    let mut y = 0;
 
-        for tile in map.tiles.iter() {
-            let pt = Point::new(x, y);
-            if fov.visuble_tiles.contains(&pt) {
-                match tile {
-                    TileType::Floor => {
-                        ctx.set(x, y, WHITE, BLACK, to_cp437('.'));
-                    }
-                    TileType::Wall => {
-                        ctx.set(x, y, GRAY, BLACK, to_cp437('#'));
-                    }
-                    TileType::Tree => {
-                        ctx.set(x, y, GREEN4, BLACK, to_cp437('|'));
-                    }
+    for (idx, tile) in map.tiles.iter().enumerate() {
+        if map.revealed_tiles[idx] {
+            match tile {
+                TileType::Floor => {
+                    ctx.set(x, y, WHITE, BLACK, to_cp437('.'));
+                }
+                TileType::Wall => {
+                    ctx.set(x, y, GRAY, BLACK, to_cp437('#'));
+                }
+                TileType::Tree => {
+                    ctx.set(x, y, GREEN4, BLACK, to_cp437('|'));
                 }
             }
         }

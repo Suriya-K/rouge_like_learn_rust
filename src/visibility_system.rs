@@ -1,4 +1,4 @@
-use super::{FieldOfView, Map, Position};
+use super::{FieldOfView, Map, Player, Position};
 use bracket_lib::prelude::{Point, field_of_view};
 use specs::prelude::*;
 
@@ -6,19 +6,28 @@ pub struct VisibilitySystem {}
 
 impl<'a> System<'a> for VisibilitySystem {
     type SystemData = (
-        ReadExpect<'a, Map>,
+        WriteExpect<'a, Map>,
         WriteStorage<'a, FieldOfView>,
         WriteStorage<'a, Position>,
+        ReadStorage<'a, Player>,
+        Entities<'a>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (map, mut viewshed, pos) = data;
-        for (viewshed, pos) in (&mut viewshed, &pos).join() {
-            viewshed.visuble_tiles.clear();
-            viewshed.visuble_tiles = field_of_view(Point::new(pos.x, pos.y), viewshed.range, &*map);
-            viewshed
-                .visuble_tiles
+        let (mut map, mut fovs, pos, player, entities) = data;
+        for (fov, pos, ent) in (&mut fovs, &pos, &entities).join() {
+            fov.visuble_tiles.clear();
+            fov.visuble_tiles = field_of_view(Point::new(pos.x, pos.y), fov.range, &*map);
+            fov.visuble_tiles
                 .retain(|p| p.x >= 0 && p.x < map.width && p.y >= 0 && p.y < map.height);
+
+            let p = player.get(ent);
+            if let Some(p) = p {
+                for view in fov.visuble_tiles.iter() {
+                    let idx = map.xy_idx(view.x, view.y);
+                    map.revealed_tiles[idx] = true;
+                }
+            }
         }
     }
 }

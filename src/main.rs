@@ -75,6 +75,7 @@ fn main() -> BError {
         rooms: Vec::new(),
         width: 80,
         height: 50,
+        revealed_tiles: vec![false; 80 * 50],
     };
     map.new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
