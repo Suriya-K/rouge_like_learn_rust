@@ -1,9 +1,6 @@
-use crate::{FieldOfView, Player};
-
 use super::{Rect, World};
 use bracket_lib::color::*;
 use bracket_lib::prelude::{Algorithm2D, BTerm, BaseMap, Point, RandomNumberGenerator, to_cp437};
-use specs::{Join, WorldExt};
 use std::cmp::{max, min};
 
 #[derive(PartialEq, Clone, Copy)]
@@ -19,6 +16,7 @@ pub struct Map {
     pub width: i32,
     pub height: i32,
     pub revealed_tiles: Vec<bool>,
+    pub visible_tiles: Vec<bool>,
 }
 
 impl Map {
@@ -152,16 +150,24 @@ pub fn draw_map(ecs: &World, ctx: &mut BTerm) {
 
     for (idx, tile) in map.tiles.iter().enumerate() {
         if map.revealed_tiles[idx] {
+            let glyph;
             match tile {
                 TileType::Floor => {
-                    ctx.set(x, y, WHITE, BLACK, to_cp437('.'));
+                    glyph = to_cp437('.');
+                    ctx.set(x, y, WHITE, BLACK, glyph);
                 }
                 TileType::Wall => {
-                    ctx.set(x, y, GRAY, BLACK, to_cp437('#'));
+                    glyph = to_cp437('#');
+                    ctx.set(x, y, GRAY, BLACK, glyph);
                 }
                 TileType::Tree => {
-                    ctx.set(x, y, GREEN4, BLACK, to_cp437('|'));
+                    glyph = to_cp437('|');
+                    ctx.set(x, y, GREEN4, BLACK, glyph);
                 }
+            }
+
+            if !map.visible_tiles[idx] {
+                ctx.set(x, y, GRAY10, BLACK, glyph);
             }
         }
 

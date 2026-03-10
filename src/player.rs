@@ -1,4 +1,4 @@
-use super::{Map, Player, Position, State, TileType};
+use super::{FieldOfView, Map, Player, Position, State, TileType};
 use bracket_lib::prelude::{BTerm, VirtualKeyCode};
 use specs::prelude::*;
 use std::cmp::{max, min};
@@ -6,15 +6,17 @@ use std::cmp::{max, min};
 pub fn move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut position = ecs.write_storage::<Position>();
     let mut player = ecs.write_storage::<Player>();
+    let mut fovs = ecs.write_storage::<FieldOfView>();
     let map = ecs.fetch::<Map>();
 
-    for (_player, pos) in (&mut player, &mut position).join() {
+    for (_player, pos, fov) in (&mut player, &mut position, &mut fovs).join() {
         let des_idx = map.xy_idx(pos.x + delta_x, pos.y + delta_y);
         if map.tiles[des_idx] != TileType::Wall && map.tiles[des_idx] != TileType::Tree {
             pos.x = min(79, max(0, pos.x + delta_x));
             //pos.x = pos.x.clamp(79, max(0, pos.x + delta_x));
             //pos.y = pos.y.clamp(49, max(0, pos.y + delta_y));
             pos.y = min(49, max(0, pos.y + delta_y));
+            fov.dirty = true;
         }
     }
 }

@@ -40,4 +40,5 @@ impl Position {
 pub struct FieldOfView {
     pub visuble_tiles: Vec<Point>,
     pub range: i32,
+    pub dirty: bool,
 }

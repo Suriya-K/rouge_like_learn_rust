@@ -76,6 +76,7 @@ fn main() -> BError {
         width: 80,
         height: 50,
         revealed_tiles: vec![false; 80 * 50],
+        visible_tiles: vec![false; 80 * 50],
     };
     map.new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
@@ -104,6 +105,7 @@ fn main() -> BError {
         .with(FieldOfView {
             visuble_tiles: Vec::new(),
             range: 6,
+            dirty: true,
         })
         .build();
     main_loop(is_context, game_state)
