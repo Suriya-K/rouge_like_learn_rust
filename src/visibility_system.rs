@@ -17,7 +17,6 @@ impl<'a> System<'a> for VisibilitySystem {
         let (mut map, mut fovs, pos, player, entities) = data;
         for (fov, pos, ent) in (&mut fovs, &pos, &entities).join() {
             if fov.dirty {
-                println!("[SYS] fov calculated for entitiy {:?}", ent);
                 fov.dirty = false;
                 fov.visuble_tiles.clear();
                 fov.visuble_tiles = field_of_view(Point::new(pos.x, pos.y), fov.range, &*map);
