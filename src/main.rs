@@ -4,6 +4,7 @@ use specs::prelude::*;
 mod components;
 mod enemy_ai_system;
 mod map;
+mod map_indexing_system;
 mod player;
 mod rect;
 mod visibility_system;
@@ -13,7 +14,9 @@ pub use player::*;
 pub use rect::Rect;
 use visibility_system::VisibilitySystem;
 
-use crate::enemy_ai_system::MonsterAI;
+use crate::{enemy_ai_system::MonsterAI, map_indexing_system::MapIndexingSystem};
+
+const MAP_SIZE: usize = 80 * 50;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum SystemState {
@@ -30,6 +33,8 @@ impl State {
     fn run_systems(&mut self) {
         let mut vis_sys = VisibilitySystem {};
         let mut monster_ai_sys = MonsterAI {};
+        let mut map_indexing_sys = MapIndexingSystem {};
+        map_indexing_sys.run_now(&self.ecs);
         monster_ai_sys.run_now(&self.ecs);
         vis_sys.run_now(&self.ecs);
         self.ecs.maintain();
@@ -94,12 +99,13 @@ fn main() -> BError {
         system_state: SystemState::Running,
     };
     let mut map: Map = Map {
-        tiles: vec![TileType::Wall; 80 * 50],
+        tiles: vec![TileType::Wall; MAP_SIZE],
         rooms: Vec::new(),
         width: 80,
         height: 50,
-        revealed_tiles: vec![false; 80 * 50],
-        visible_tiles: vec![false; 80 * 50],
+        revealed_tiles: vec![false; MAP_SIZE],
+        visible_tiles: vec![false; MAP_SIZE],
+        blocked_tiles: vec![false; MAP_SIZE],
     };
     map.new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
@@ -111,6 +117,7 @@ fn main() -> BError {
     game_state.ecs.register::<FieldOfView>();
     game_state.ecs.register::<Monster>();
     game_state.ecs.register::<EntityName>();
+    game_state.ecs.register::<BlocksTile>();
 
     let mut rng = RandomNumberGenerator::new();
     for (i, room) in map.rooms.iter().skip(1).enumerate() {
@@ -139,6 +146,7 @@ fn main() -> BError {
                 range: 4,
                 dirty: true,
             })
+            .with(BlocksTile {})
             .build();
     }
 

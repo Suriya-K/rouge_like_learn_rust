@@ -50,3 +50,6 @@ pub struct Monster {}
 pub struct EntityName {
     pub name: String,
 }
+
+#[derive(Component)]
+pub struct BlocksTile {}

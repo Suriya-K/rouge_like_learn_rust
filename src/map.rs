@@ -1,6 +1,8 @@
 use super::{Rect, World};
 use bracket_lib::color::*;
-use bracket_lib::prelude::{Algorithm2D, BTerm, BaseMap, Point, RandomNumberGenerator, to_cp437};
+use bracket_lib::prelude::{
+    Algorithm2D, BTerm, BaseMap, DistanceAlg, Point, RandomNumberGenerator, SmallVec, to_cp437,
+};
 use std::cmp::{max, min};
 
 #[derive(PartialEq, Clone, Copy)]
@@ -17,6 +19,7 @@ pub struct Map {
     pub height: i32,
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles: Vec<bool>,
+    pub blocked_tiles: Vec<bool>,
 }
 
 impl Map {
@@ -25,6 +28,13 @@ impl Map {
     /// return usize
     pub fn xy_idx(&self, x: i32, y: i32) -> usize {
         (y as usize * 80) + x as usize
+    }
+
+    /// Translate idx back to 2D area map x y
+    pub fn idx_xy(&self, idx: usize) -> (i32, i32) {
+        let x = idx as i32 % self.width;
+        let y = idx as i32 / self.width;
+        (x, y)
     }
 
     fn apply_room_to_map(&mut self, room: &Rect) {
@@ -123,6 +133,20 @@ impl Map {
 
         map
     }
+
+    fn is_exit_valid(&self, x: i32, y: i32) -> bool {
+        if x < 1 || x > self.width - 1 || y < 1 || y > self.height - 1 {
+            return false;
+        }
+        let idx = self.xy_idx(x, y);
+        !self.blocked_tiles[idx]
+    }
+
+    pub fn populate_blocked(&mut self) {
+        for (i, tile) in self.tiles.iter().enumerate() {
+            self.blocked_tiles[i] = *tile == TileType::Wall;
+        }
+    }
 }
 
 impl Algorithm2D for Map {
@@ -134,6 +158,41 @@ impl Algorithm2D for Map {
 impl BaseMap for Map {
     fn is_opaque(&self, idx: usize) -> bool {
         self.tiles[idx] == TileType::Wall
+    }
+
+    fn get_available_exits(&self, idx: usize) -> SmallVec<[(usize, f32); 10]> {
+        let mut exits = SmallVec::new();
+        let (x, y) = self.idx_xy(idx);
+        let w = self.width as usize;
+        // because computer store data into 1D array to move left-right just +-x but updown we need
+        // to jump by using width size of array for example
+        // map_data: [0][1][2]
+        //          [3][4][5]
+        // if idx are 2 then we can -1 to left +1 to right
+        // if move down 2 + width(3) = 5
+        // if move up 2 - width(3) = -1
+
+        if self.is_exit_valid(x - 1, y) {
+            exits.push((idx - 1, 2.0));
+        }
+        if self.is_exit_valid(x + 1, y) {
+            exits.push((idx + 1, 2.0));
+        }
+        if self.is_exit_valid(x, y - 1) {
+            exits.push((idx - w, 2.0));
+        }
+        if self.is_exit_valid(x, y + 1) {
+            exits.push((idx + w, 2.0));
+        }
+        exits
+    }
+
+    fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
+        let (x1, y1) = self.idx_xy(idx1);
+        let (x2, y2) = self.idx_xy(idx2);
+        let p1 = Point::new(x1, y1);
+        let p2 = Point::new(x2, y2);
+        DistanceAlg::Pythagoras.distance2d(p1, p2)
     }
 }
 
