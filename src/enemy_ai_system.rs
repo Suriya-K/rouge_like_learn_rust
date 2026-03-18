@@ -19,16 +19,15 @@ impl<'a> System<'a> for MonsterAI {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (map, mut field_of_view, mut position, monster, player_point, entity_name) = data;
+        let (mut map, mut field_of_view, mut position, monster, player_point, entity_name) = data;
 
-        for (fov, _mon, e_name, p) in
+        for (fov, mon, e_name, p) in
             (&mut field_of_view, &monster, &entity_name, &mut position).join()
         {
             let point = Point::new(p.x, p.y);
             let distance = DistanceAlg::Pythagoras.distance2d(point, *player_point);
             if distance < 1.5 {
                 console::log(&format!("[SYS] {} Close to you!", e_name.name));
-                return;
             } else if fov.visuble_tiles.contains(&*player_point) {
                 let path = a_star_search(
                     map.xy_idx(p.x, p.y) as i32,
@@ -36,9 +35,13 @@ impl<'a> System<'a> for MonsterAI {
                     &*map,
                 );
                 if path.success && path.steps.len() > 1 {
+                    let mut idx = map.xy_idx(p.x, p.y);
+                    map.blocked_tiles[idx] = false;
                     let (new_x, new_y) = map.idx_xy(path.steps[1]);
                     p.x = new_x;
                     p.y = new_y;
+                    idx = map.xy_idx(p.x, p.y);
+                    map.blocked_tiles[idx] = true;
                     fov.dirty = true;
                 } else {
                     println!("I see you but i can't find a way");
