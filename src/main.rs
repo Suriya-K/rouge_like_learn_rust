@@ -34,9 +34,9 @@ impl State {
         let mut vis_sys = VisibilitySystem {};
         let mut monster_ai_sys = MonsterAI {};
         let mut map_indexing_sys = MapIndexingSystem {};
-        map_indexing_sys.run_now(&self.ecs);
         monster_ai_sys.run_now(&self.ecs);
         vis_sys.run_now(&self.ecs);
+        map_indexing_sys.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }

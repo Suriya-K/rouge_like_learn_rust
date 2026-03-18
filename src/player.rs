@@ -14,7 +14,7 @@ pub fn move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
 
     for (_player, pos, fov) in (&mut player, &mut position, &mut fovs).join() {
         let des_idx = map.xy_idx(pos.x + delta_x, pos.y + delta_y);
-        if map.tiles[des_idx] != TileType::Wall && map.tiles[des_idx] != TileType::Tree {
+        if !map.blocked_tiles[des_idx] {
             pos.x = min(79, max(0, pos.x + delta_x));
             //pos.x = pos.x.clamp(79, max(0, pos.x + delta_x));
             //pos.y = pos.y.clamp(49, max(0, pos.y + delta_y));

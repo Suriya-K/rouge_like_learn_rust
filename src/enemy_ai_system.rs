@@ -1,6 +1,6 @@
 use std::fmt::format;
 
-use bracket_lib::prelude::{Point, a_star_search, console};
+use bracket_lib::prelude::{DistanceAlg, Point, a_star_search, console};
 use specs::{Join, ReadExpect, ReadStorage, System, WriteExpect, WriteStorage};
 
 use crate::{EntityName, FieldOfView, Map, Monster, Position};
@@ -24,8 +24,12 @@ impl<'a> System<'a> for MonsterAI {
         for (fov, _mon, e_name, p) in
             (&mut field_of_view, &monster, &entity_name, &mut position).join()
         {
-            if fov.visuble_tiles.contains(&*player_point) {
-                console::log(&format!("[SYS] {} See you!", e_name.name));
+            let point = Point::new(p.x, p.y);
+            let distance = DistanceAlg::Pythagoras.distance2d(point, *player_point);
+            if distance < 1.5 {
+                console::log(&format!("[SYS] {} Close to you!", e_name.name));
+                return;
+            } else if fov.visuble_tiles.contains(&*player_point) {
                 let path = a_star_search(
                     map.xy_idx(p.x, p.y) as i32,
                     map.xy_idx(player_point.x, player_point.y) as i32,
@@ -36,6 +40,8 @@ impl<'a> System<'a> for MonsterAI {
                     p.x = new_x;
                     p.y = new_y;
                     fov.dirty = true;
+                } else {
+                    println!("I see you but i can't find a way");
                 }
             }
         }
